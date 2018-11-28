@@ -37,11 +37,20 @@ def preprocesamiento():
                     break
                 contador += 1
                 #print '%s) %s' % (str(contador), delimitadores)
-                if(delimitadores != ('\n')):
+                if (delimitadores == "true"):
+                    lexema.append(delimitadores)
+                    numLinea.append(linea)
+                    token.append("TKN_True")
+                elif (delimitadores == "false"):
+                    lexema.append(delimitadores)
+                    numLinea.append(linea)
+                    token.append("TKN_False")
+                elif (delimitadores != ('\n')):
                     if (delimitadores != ('\r')):
                         lexema.append(delimitadores)
                         numLinea.append(linea)
                         token.append("TKN_Undefined")
+
         linea = linea + 1
 
     for x in range(0, len(lexema)):
@@ -56,6 +65,8 @@ def preprocesamiento():
 # -----------------------------------------------------------------------------
 tknIdentificador = re.compile('[a-zA-Z]+[a-zA-Z1-9]*')
 tknNumero = re.compile('[0-9]+')
+tknFLoat = re.compile('[\d]+\.[\d]+')
+tknString = re.compile('"[a-zA-Z]+[a-zA-Z1-9]*"')
 
 # Autómatas
 # LEXICAL ANALYZER
@@ -131,12 +142,18 @@ def tokens(listaTokens):
             listaTokens[token][2] = "tkn_If"
         elif listaTokens[token][0] == "else":
             listaTokens[token][2] = "tkn_Else"
-        elif re.match(tknIdentificador, listaTokens[token][0]):
+
+        elif listaTokens[token][2] != "TKN_True" and listaTokens[token][2] != "TKN_False" and re.match(tknIdentificador, listaTokens[token][0]):
             m = re.match(tknIdentificador, listaTokens[token][0])
+            print ("!! " + m.group(0))
             if len(m.group(0)) == len(listaTokens[token][0]):
                 listaTokens[token][2] = "tkn_Identificador"
             else:
                 print ("Error cadena no encontrada en la Linea: ", listaTokens[token][1])
+
+        elif re.match(tknFLoat, str(listaTokens[token][0])):
+            m = re.match(tknFLoat, listaTokens[token][0])
+            listaTokens[token][2] = "tkn_Numero_Float"
 
         elif re.match(tknNumero, listaTokens[token][0]):
             m = re.match(tknNumero, listaTokens[token][0])
@@ -144,6 +161,10 @@ def tokens(listaTokens):
                 listaTokens[token][2] = "tkn_Numero"
             else:
                 print ("Error cadena no encontrada en la Linea: ", listaTokens[token][1])
+
+        elif re.match(tknString, listaTokens[token][0]):
+            m = re.match(tknString, listaTokens[token][0])
+            listaTokens[token][2] = "tkn_String"
         else:
             print ("Error cadena no encontrada en la Linea: ",listaTokens[token][1])
             #Agregar a tabla de errores
@@ -260,6 +281,13 @@ class NoTerminal:
         self.value = None
         self.tam = None
 
+class Variable:
+    def __init__(self):
+        self.lexema = None  # Me permite acceder a mi TS en la pos "lexema"
+        self.tipo = None
+        self.value = None
+        self.tam = None
+
 # Inicializar No Terminales
 # -----------------------------------------------------------------------------
 
@@ -317,7 +345,8 @@ def operacion(objeto1,objeto2,operador):
         return objeto1 < objeto2
 
 def getValue(id):
-    return tablaSimbolos[id]['Value']
+    return tablaSimbolos[id]['Valor']
+
 def getLexema(id):
     return tablaSimbolos[id]['Lexema']
 def getTam(id):
@@ -327,7 +356,7 @@ def getType(id):
     return tablaSimbolos[id]['Type']
 
 def setValue(id,value):
-    tablaSimbolos[id]['Value'] = value
+    tablaSimbolos[id]['Valor'] = value
 
 def setType(id,type):
     tablaSimbolos[id]['Type'] = type
@@ -336,14 +365,16 @@ def setTam(id,tam):
     tablaSimbolos[id]['Tam'] = tam
 
 # Comprobación de tipos && SetValue
-def _1(objeto1,id):
+def rule_1(id, objeto1):
+    print "RULE 1"
     if objeto1.tipo == getType(id):
-        setValue(id,objeto1.value)
+        print id, " = ", objeto1.value
+        setValue(id, objeto1.value)
     else:
         print "Error de tipo"
 
 # Comprobación de tipos && Paso de Valor
-def _2(objeto1,objeto2):
+def rule_2(objeto1, objeto2):
     if objeto1.tipo == objeto2.tipo:
         objeto1.value = objeto2.value
     else:
@@ -472,6 +503,7 @@ def getAllTokens(listTokens):
 #-----------------------------------------------------------------------------
 def tablaSintac(entrada,pila):
     while(len(entrada)>0):
+        print "\n"
         print "Pila:", pila[::-1]
         print "Entrada:", entrada
         if(terminales.has_key(pila[0])):
@@ -509,10 +541,125 @@ def tablaSintac(entrada,pila):
                         pila.insert(0,empilar[j])
 
 
-def semanticAnalyzer(listaTokens):
+def semanticAnalyzer(listaTokens, pila):
     print "\nSemantic Analizer"
     lexemList = getAllLexems(listaTokens)
     tokenList = getAllTokens(listaTokens)
+
+    for i in range(0,5):
+        tokenList.pop(0)
+        lexemList.pop(0)
+
+    '''print " ANTES"
+    print "TOKENS", tokenList
+    print "LEXEMS", lexemList
+    '''
+    stack = []
+    ##for i in range (0,len(lexemList)):
+    while len(tokenList) > 5:
+        print "\nTOKENS", tokenList
+        print "LEXEMS", lexemList
+        token = tokenList.pop(0)
+        lexem = lexemList.pop(0)
+        if token in noTerminales:
+            fila = noTerminales[pila[0]] - 1
+            columna = terminales[entrada[0]]
+            empila = tablaSintactica[fila * 37 + columna]
+            print empila, "nt"
+            pila.pop(0)
+        elif token in terminales:
+            #print token, "t"
+            if token in ("tkn_Int", "tkn_Float", "tkn_String", "tkn_Bool"):
+                nToken = tokenList.pop(0)
+                nLexem = lexemList.pop(0) # variable name
+                if nToken == "tkn_Identificador":
+                    nnToken = tokenList.pop(0)
+                    nnLexem = lexemList.pop(0) #semicolon or equal
+                    if nnToken == ";": # variable definition
+                        val = Variable()
+                        print "adsf", token
+                        if token == "tkn_Int":
+                            val.tipo = nLexem
+                            val.tam = 4
+                            setType(nLexem, 'int')
+                            setValue(nLexem, 0)
+
+                        ##TODO: hacer para los demas tipos de datos
+                    elif nnToken == "=":
+                        nnnToken = tokenList.pop(0)
+                        nnnLexem = lexemList.pop(0)
+
+                        val = Variable()
+                        if nnnToken == "tkn_Numero":
+                            val.tipo = "int"
+                            val.value = nnnLexem
+                            setType(nLexem, 'int')
+                            rule_1(nLexem, val)
+                    # removing semicolon
+                    #print "removing:", tokenList.pop(0)
+                    #print "removing:", lexemList.pop(0)
+                    continue
+
+            elif token == "tkn_If":
+                print " case TOKEN IF"
+                tokenList.pop(0) #removing keys
+                lexemList.pop(0)
+                #print tokenList
+                endPosition = tokenList.index(")")
+                #print "final: ", endPosition
+
+                '''
+                for i in range(0, endPosition):
+                    ntoken = tokenList.pop(0)
+                    nLexem = lexemList.pop(0)
+                    boolOpPos = tokenList.index("&&")
+                    '''
+                #if endPosition =
+                nToken = tokenList.pop(0)
+                nLexem = lexemList.pop(0)
+
+                nnToken = tokenList.pop(0)
+                nnLexem = lexemList.pop(0)
+
+                nnnToken = tokenList.pop(0)
+                nnnLexem = lexemList.pop(0)
+
+                val1 = Variable()
+                val2 = Variable()
+
+                val1.lexema = nLexem
+                val2.lexema = nnnLexem
+
+                variables = {
+                    'tkn_Numero_Float': 'float',
+                    'tkn_Numero': 'int'
+                }
+
+                #print "operators: ", nLexem, nnLexem, nnnLexem
+                if nnToken in ("==", "!=", "<", "<=", ">", ">="):
+
+                    #print nLexem," - ", nnnLexem
+                    if tablaSimbolos.has_key(nLexem) and tablaSimbolos.has_key(nnnLexem): # ambos son variables
+                        #print getType(nLexem)
+                        #print getType(nnnLexem)
+                        if getType(nLexem) != getType(nnnLexem):
+                            print "Error semantico"
+                    elif tablaSimbolos.has_key(nLexem): # primer item es variable
+                        #print getType(nLexem)
+                        #print getType(nnnLexem)
+                        print getType(nLexem), nnnToken
+                        if getType(nLexem) != variables[nnnToken]:
+                            print "Error semantico"
+                    elif tablaSimbolos.has_key(nnnLexem): # segundo item es variable
+                        print getType(nLexem), nnnToken
+                        if getType(nnnLexem) != variables[nToken]:
+                            print "Error semantico"
+
+
+
+                continue
+
+    print " DESPUES"
     print tokenList
     print lexemList
     
@@ -528,14 +675,14 @@ imprimir(listaTokens)
 tablaSim(listaTokens)
 imprimirTS()
 
-
 #_1(sentenciap,listaTokens[6][0]);
 
 #for key in tablaSimbolos:
  #   print key, ":", tablaSimbolos[key]
 
-
+pilatmp = pila
 #tablaSintac(entrada, pila)
-semanticAnalyzer(listaTokens)
+semanticAnalyzer(listaTokens, pilatmp)
 
+imprimirTS()
 
