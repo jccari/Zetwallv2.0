@@ -1,0 +1,61 @@
+S -> INCLUDE S | TD_INT main PAR_O PAR_C LLA_O lista_sentencias return 0 SCOLON LLA_C
+
+lista_sentencias -> sentencia lista_sentencias | ε
+
+sentencia -> ID sentencia’ SCOLON | WHILE | IF_ELSE | def_basica | TKN_NUM T’ E’ SCOLON | PAR_O E PAR_C SCOLON
+
+sentencia’ -> F’ T’ E’ | def_espec’ | operadores OP_ASSIG E | ε
+
+WHILE -> PR_WHILE PAR_O condicion PAR_C W’
+
+IF_ELSE -> IF IF_ELSE’
+
+IF_ELSE’ -> PR_ELSE W’
+
+def_basica -> tipo_Dato lista_def SCOLON
+
+tipo_Dato -> TD_INT | TD_FLOAT | TD_DOUBLE | TD_BOOL | TD_CHAR
+
+lista_def -> def_espec lista_def’
+
+lista_def’ -> COMA lista_def | ε
+
+def_espec -> ID def_espec’
+
+def_espec’ -> simple_asign | acceso_array def_espec’’ | ε
+
+def_espec’’ -> simple_asign | ε
+
+acceso_array -> COR_O TKN_NUM_ENTERO COR_C
+
+simple_asign -> OP_ASSIG E | ε
+
+IF -> PR_IF PAR_O condicion PAR_C W’
+
+W’ -> sentencia | LLA_O lista_sentencias LLA_C
+
+condicion -> condicion_logica condicion’
+
+condicion’ -> OP_AND OP_AND condicion_logica | OP_OR OP_OR condicion_logica | ε
+
+condicion_logica -> E operadores_log E
+
+operadores_log -> OP_MORE | OP_LESS | OP_M_EQ | OP_L_EQ | OP_EQ | OP_DIFF
+
+operadores -> op_aditivos | op_multiplicativos
+
+op_aditivos -> OP_SUM | OP_SUBS
+
+op_multiplicativos -> OP_MULT | OP_DIV | OP_PCNT
+
+E -> TE’ | PAR_O E PAR_C
+
+E’ -> op_aditivos E | ε
+
+T -> FT’
+
+T’ -> op_multiplicativos T | ε
+
+F -> ID F’ | TKN_NUM
+
+F’ -> acceso_array | ε

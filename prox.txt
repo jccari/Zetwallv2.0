@@ -1,0 +1,4 @@
+mostrar codigo con error ejmeplos ( 4 maso )
+mostrar en codigo las reglas 
+explicar analizador semantico
+
